@@ -1,5 +1,4 @@
 import datetime
-
 import pytest
 
 from parse import Transaction, _collapse_transactions, _normalize_ynab_splits

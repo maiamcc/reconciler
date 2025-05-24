@@ -1,15 +1,7 @@
-#! /bin/env python
+from typing import List
 
-from parse import parse_csv, ImportType
-# TODO: arg parser
-YNAB_CSV_PATH = './ynab.csv'
-CITI_CARD_CSV_PATH = './citi_card.csv'
+from parse import Transaction
 
 
-def main():
-    ynab_transactions = parse_csv(YNAB_CSV_PATH, ImportType.YNAB)
-    print(ynab_transactions[:5])
-
-
-if __name__ == '__main__':
-    main()
+def reconcile(source_transactions: List[Transaction], ynab_transactions: List[Transaction]) -> List[Transaction]:
+    pass

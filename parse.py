@@ -1,8 +1,7 @@
 import csv
 from dataclasses import dataclass
-from enum import Enum
-
 import datetime
+from enum import Enum
 from typing import Callable, Optional, List
 import re
 

@@ -1,7 +1,8 @@
 import csv
 from dataclasses import dataclass
-import datetime
 from enum import Enum
+
+import datetime
 from typing import Callable, Optional, List
 import re
 
@@ -13,6 +14,7 @@ class ImportType(Enum):
 
 
 YNAB_DATE_FMTSTR = '%m/%d/%Y'
+CITI_DATE_FMTSTR = '%m/%d/%Y'
 
 
 @dataclass
@@ -35,6 +37,25 @@ class Transaction:
             return False, False
 
         return True, match.group(1) == '1'
+
+    def amt(self) -> float:
+        if self.inflow:
+            return self.inflow
+        return -self.outflow
+
+    def datestr(self) -> str:
+        return self.date.strftime(YNAB_DATE_FMTSTR)
+
+    def __str__(self) -> str:
+        cash_str = f'+${self.inflow}' if self.inflow else f'-${self.outflow}'
+        s = f'{self.datestr()} | {self.payee} | {cash_str}'
+        if self.notes:
+            s += f' | {self.notes}'
+        return s
+
+    @staticmethod
+    def list_to_string(transactions: List['Transaction']) -> str:
+        return '\t' + '\n\t'.join([trans.__str__() for trans in transactions])
 
 
 def parse_dollar(dollarstr: str) -> float:
@@ -118,7 +139,25 @@ def _normalize_ynab_splits(transactions: List[Transaction]) -> List[Transaction]
 
 
 def parse_citi(path: str) -> List[Transaction]:
-    pass
+    transactions = []
+    with open(path) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            try:
+                transactions.append(
+                    Transaction(
+                        datetime.datetime.strptime(row['Date'], CITI_DATE_FMTSTR),
+                        row['Description'],
+                        abs(float(row['Credit'])) if row['Credit'] else 0,
+                        float(row['Debit']) if row['Debit'] else 0,
+                        None
+                    )
+                )
+            except Exception as e:
+                print(f'!!! done goofed parsing row:\n\t{row}')
+                raise e
+
+    return transactions
 
 
 PARSE_FUNCS: dict[ImportType, Callable[[str], List[Transaction]]] = {

@@ -1,5 +1,6 @@
 import csv
 from dataclasses import dataclass
+from decimal import Decimal
 from enum import Enum
 
 import datetime
@@ -22,8 +23,8 @@ class Transaction:
     """The details I care about of a transaction."""
     date: datetime.datetime
     payee: str
-    inflow: float
-    outflow: float
+    inflow: Decimal
+    outflow: Decimal
     notes: Optional[str]
 
     def is_split(self) -> (bool, bool):
@@ -38,7 +39,7 @@ class Transaction:
 
         return True, match.group(1) == '1'
 
-    def amt(self) -> float:
+    def amt(self) -> Decimal:
         if self.inflow:
             return self.inflow
         return -self.outflow
@@ -58,8 +59,8 @@ class Transaction:
         return '\t' + '\n\t'.join([trans.__str__() for trans in transactions])
 
 
-def parse_dollar(dollarstr: str) -> float:
-    return float(re.sub(r'[^\d.]', '', dollarstr))
+def parse_dollar(dollarstr: str) -> Decimal:
+    return Decimal(re.sub(r'[^\d.]', '', dollarstr))
 
 
 def parse_ynab(path: str) -> List[Transaction]:
@@ -148,8 +149,8 @@ def parse_citi(path: str) -> List[Transaction]:
                     Transaction(
                         datetime.datetime.strptime(row['Date'], CITI_DATE_FMTSTR),
                         row['Description'],
-                        abs(float(row['Credit'])) if row['Credit'] else 0,
-                        float(row['Debit']) if row['Debit'] else 0,
+                        abs(Decimal(row['Credit'])) if row['Credit'] else 0,
+                        Decimal(row['Debit']) if row['Debit'] else 0,
                         None
                     )
                 )

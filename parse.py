@@ -25,9 +25,17 @@ class Transaction:
     outflow: float
     notes: Optional[str]
 
-    def is_split(self) -> bool:
-        """Is it a YNAB split transaction?"""
-        return re.match('.*Split \(\d+\/\d+\).*', self.notes) is not None
+    def is_split(self) -> (bool, bool):
+        """Is it a YNAB split transaction?
+        Returns:
+            - is_split (bool): is this transaction part of a split?
+            - is_first (bool): is this the FIRST transaction of a split?
+        """
+        match = re.match('.*Split \((\d+)\/\d+\).*', self.notes)
+        if not match:
+            return False, False
+
+        return True, match.group(1) == '1'
 
 
 def parse_dollar(dollarstr: str) -> float:
@@ -50,7 +58,7 @@ def parse_ynab(path: str) -> List[Transaction]:
                     )
                 )
             except Exception as e:
-                print('!!! done goofed parsing row:\n\t{row}')
+                print(f'!!! done goofed parsing row:\n\t{row}')
                 raise e
 
     return _normalize_ynab_splits(transactions)
@@ -66,22 +74,23 @@ def _collapse_transactions(transactions: List[Transaction]) -> Transaction:
 
     collapsed_payee = ' / '.join({trans.payee for trans in transactions})
     total_inflow = sum([trans.inflow for trans in transactions])
-    total_outflow = sum([trans.inflow for trans in transactions])
+    total_outflow = sum([trans.outflow for trans in transactions])
 
     return Transaction(
         transactions[0].date,
-        transactions[0].payee,
+        collapsed_payee,
         total_inflow,
         total_outflow,
         f'Collapsed from {len(transactions)} transactions'
     )
+
 
 def _normalize_ynab_splits(transactions: List[Transaction]) -> List[Transaction]:
     """
     YNAB will write a split transaction as two separate rows, but for reconciliation
     purposes I want a single row (because that's how it'll show up in my bank statement).
 
-    Assume split transactions will be adjacent in the list and contain the meme "Split (x/y)",
+    Assume split transactions will be adjacent in the list and contain the memo "Split (x/y)",
     otherwise we're in real trouble.
     """
     normalized = []
@@ -91,7 +100,9 @@ def _normalize_ynab_splits(transactions: List[Transaction]) -> List[Transaction]
         if not trans.is_split():
             if current_split:
                 # we've reached the end of the current split we're evaluating, resolve it
-                normalized.append(_collapse_transactions(current_split))
+                collapsed = _collapse_transactions(current_split)
+                # print(f'collapsed trans.: {collapsed}')
+                normalized.append(collapsed)
                 current_split = []
             normalized.append(trans)
         else:
@@ -102,6 +113,7 @@ def _normalize_ynab_splits(transactions: List[Transaction]) -> List[Transaction]
         normalized.append(_collapse_transactions(current_split))
 
     return normalized
+
 
 def parse_citi(path: str) -> List[Transaction]:
     pass

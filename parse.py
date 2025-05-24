@@ -29,7 +29,7 @@ class Transaction:
         """Is it a YNAB split transaction?
         Returns:
             - is_split (bool): is this transaction part of a split?
-            - is_first (bool): is this the FIRST transaction of a split?
+            - is_beginning_of_split (bool): is this the FIRST transaction of a split?
         """
         match = re.match('.*Split \((\d+)\/\d+\).*', self.notes)
         if not match:
@@ -66,9 +66,9 @@ def parse_ynab(path: str) -> List[Transaction]:
 
 def _collapse_transactions(transactions: List[Transaction]) -> Transaction:
     """Given a list of transactions, smush them into one."""
+    if not transactions:
+        raise ValueError('No transactions passed!')
 
-    # Hopefully they have the same date and merchant. If not uh,
-    # cross that bridge when we come to it?
     if len({trans.date for trans in transactions}) != 1:
         raise ValueError(f'Can\'t collapse transactions with different dates! {transactions}')
 
@@ -97,15 +97,18 @@ def _normalize_ynab_splits(transactions: List[Transaction]) -> List[Transaction]
     current_split = []  # accumulate transactions belonging to a single split
 
     for trans in transactions:
-        if not trans.is_split():
+        is_split, is_beginning_of_split = trans.is_split()
+        if not is_split:
             if current_split:
                 # we've reached the end of the current split we're evaluating, resolve it
-                collapsed = _collapse_transactions(current_split)
-                # print(f'collapsed trans.: {collapsed}')
-                normalized.append(collapsed)
+                normalized.append(_collapse_transactions(current_split))
                 current_split = []
             normalized.append(trans)
         else:
+            if is_beginning_of_split and current_split:
+                # reached the end of the current split, resolve it
+                normalized.append(_collapse_transactions(current_split))
+                current_split = []
             current_split.append(trans)
 
     # if the last transaction was part of a split, handle that split

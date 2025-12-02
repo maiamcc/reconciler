@@ -41,11 +41,18 @@ def reconcile(source_transactions: List[Transaction], ynab_transactions: List[Tr
     for month, ynab_for_month in ynab_transactions_by_month.items():
         source_for_month = source_transactions_by_month[month]
 
+        month_total_source = sum([txn.inflow - txn.outflow for txn in source_for_month])
+        month_total_ynab = sum([txn.inflow - txn.outflow for txn in ynab_for_month])
+
         unclaimed_source, unclaimed_ynab = _reconcile_month(source_for_month, ynab_for_month)
 
         unclaimed_source_transactions.extend(unclaimed_source)
         unclaimed_ynab_transactions.extend(unclaimed_ynab)
         print(f'successfully reconciled month {month.strftime(parse.YNAB_DATE_FMTSTR)}')
+        print(f'-- Source total: {month_total_source}')
+        print(f'-- YNAB total: {month_total_ynab}')
+        if month_total_ynab != month_total_source:
+            print(f'---- DIFFERENCE: {month_total_ynab - month_total_source}')
 
     extra_months_in_source = set(source_transactions_by_month.keys()) - (ynab_transactions_by_month.keys())
     print('-----')

@@ -15,7 +15,7 @@ class ImportType(Enum):
 
 
 YNAB_DATE_FMTSTR = '%m/%d/%Y'
-CITI_DATE_FMTSTR = '%m/%d/%Y'
+CITI_DATE_FMTSTR = '%m-%d-%Y'
 
 
 @dataclass

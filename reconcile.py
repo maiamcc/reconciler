@@ -2,6 +2,8 @@ import datetime
 from typing import List, Dict
 from collections import defaultdict, namedtuple
 
+from tabulate import tabulate
+
 import parse
 from parse import Transaction
 
@@ -73,10 +75,13 @@ def _reconcile_month(source_transactions: List[Transaction], ynab_transactions: 
     unclaimed_source_transactions = []
     unclaimed_ynab_transactions = []
 
+    matched_months_table = []
     for amt, source_trans in source_by_amount.in_list.items():
         ynab_trans = ynab_by_amount.in_list[amt]
         if len(source_trans) == len(ynab_trans):
-            pass
+            matched_months_table.append(
+                [Transaction.list_to_string(source_trans), Transaction.list_to_string(ynab_trans)]
+            )
         else:
             unclaimed_source_transactions.extend(source_trans)
             unclaimed_ynab_transactions.extend(ynab_trans)
@@ -97,5 +102,7 @@ def _reconcile_month(source_transactions: List[Transaction], ynab_transactions: 
     extra_outflow_amts_in_ynab = set(ynab_by_amount.out_list.keys()) - (source_by_amount.out_list.keys())
     for extra_amt in extra_outflow_amts_in_ynab:
         unclaimed_ynab_transactions.extend(ynab_by_amount.out_list[extra_amt])
+
+    print(tabulate(matched_months_table))
 
     return unclaimed_source_transactions, unclaimed_ynab_transactions
